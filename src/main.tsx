@@ -1,4 +1,6 @@
-import { StrictMode, useState } from 'react';
+import { StrictMode, useEffect, useState } from 'react';
+import { TripDashboard } from './trips/TripDashboard';
+import { spainTrip, tripHref, tripRoute } from './trips/model';
 import { createRoot } from 'react-dom/client';
 import './style.css';
 
@@ -33,7 +35,7 @@ const actions: { title: string; sub: string; icon: IconName }[] = [
   { title: 'Travel Notes', sub: 'Keep every little detail', icon: 'note' },
   { title: 'Create New Trip', sub: 'Where to next?', icon: 'plus' },
 ];
-function App() {
+function Homepage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialog, setDialog] = useState<string | null>(null);
   const [saved, setSaved] = useState<string[]>([]);
@@ -61,11 +63,11 @@ function App() {
         <section className="hero" aria-label="Upcoming trip to Barcelona">
           <Photo src={photos.barcelona} alt="Sunlit Barcelona skyline and the Sagrada Família" className="hero-photo" />
           <div className="hero-shade" /><div className="hero-top"><span className="glass-pill"><span />THE NEXT ADVENTURE</span><span className="hero-coordinate">41.3874° N · 2.1686° E</span></div>
-          <div className="hero-content"><p className="hero-kicker">A LITTLE SUNSHINE, A LITTLE SLOWER</p><h2>Hola, Barcelona.</h2><p>Winding streets. Long lunches. A city to get lost in.</p><button className="cream-button" onClick={() => setDialog('Spain 2027')}>Explore your trip <Icon name="arrow" size={18} /></button></div><span className="hero-location"><Icon name="pin" size={15} /> Barcelona, Spain</span>
+          <div className="hero-content"><p className="hero-kicker">A LITTLE SUNSHINE, A LITTLE SLOWER</p><h2>Hola, Barcelona.</h2><p>Winding streets. Long lunches. A city to get lost in.</p><button className="cream-button" onClick={() => { window.location.hash = tripHref(spainTrip.id); }}>Explore your trip <Icon name="arrow" size={18} /></button></div><span className="hero-location"><Icon name="pin" size={15} /> Barcelona, Spain</span>
         </section>
-        <section className="upcoming-card" aria-label="Upcoming trip details"><div className="trip-calendar"><span>FEB</span><strong>15</strong></div><div className="upcoming-title"><span className="eyebrow">YOUR UPCOMING TRIP</span><h3>Spain 2027 <span className="status-pill">Planning</span></h3><p className="trip-timing"><span className="trip-date"><Icon name="calendar" size={14} />15–19 February 2027</span><span className="dot-separator" aria-hidden="true">·</span><span className="trip-duration">5 days of possibility</span></p></div><div className="trip-travelers"><span>J</span><p>One beautiful adventure<br /><small>Made just for you</small></p></div><button className="round-arrow" aria-label="View Spain 2027 trip" onClick={() => setDialog('Spain 2027')}><Icon name="arrow" /></button></section>
+        <section className="upcoming-card" aria-label="Upcoming trip details"><div className="trip-calendar"><span>FEB</span><strong>15</strong></div><div className="upcoming-title"><span className="eyebrow">YOUR UPCOMING TRIP</span><h3>Spain 2027 <span className="status-pill">Planning</span></h3><p className="trip-timing"><span className="trip-date"><Icon name="calendar" size={14} />15–19 February 2027</span><span className="dot-separator" aria-hidden="true">·</span><span className="trip-duration">5 days of possibility</span></p></div><div className="trip-travelers"><span>J</span><p>One beautiful adventure<br /><small>Made just for you</small></p></div><button className="round-arrow" aria-label="View Spain 2027 trip" onClick={() => { window.location.hash = tripHref(spainTrip.id); }}><Icon name="arrow" /></button></section>
         <section className="quick-section" aria-labelledby="quick-title"><div className="section-heading quick-heading"><h2 id="quick-title">A little planning goes a long way</h2><span>THE DETAILS THAT MAKE IT YOURS</span></div><div className="quick-actions">{actions.map(action => <button key={action.title} className={`quick-card ${action.icon === 'plus' ? 'new-trip' : ''}`} onClick={() => setDialog(action.title)}><span className={`action-icon icon-${action.icon}`}><Icon name={action.icon} /></span><strong>{action.title}</strong><small>{action.sub}</small></button>)}</div></section>
-        <section id="trips" className="trips-section" aria-labelledby="trips-title"><div className="section-heading"><div><p className="eyebrow">EVERY JOURNEY HAS A STORY</p><h2 id="trips-title">Your trips</h2></div><span className="section-note">Your next memory starts here.</span></div><div className="trips-grid"><button className="trip-card" onClick={() => setDialog('Spain 2027')}><div className="trip-photo"><Photo src={photos.barcelona} alt="Barcelona rooftops" /><span className="photo-badge">UPCOMING</span><span className="photo-bottom">Spain</span></div><div className="trip-card-info"><div><h3>Spain 2027</h3><p>15–19 February 2027 <span>· 5 days</span></p></div><span className="small-arrow"><Icon name="arrow" size={19} /></span></div></button><button className="empty-trip" onClick={() => setDialog('Create New Trip')}><span className="dashed-icon"><Icon name="plus" size={25} /></span><h3>A new adventure is calling</h3><p>Big dreams or a little weekend away.<br />Make a little space for your next escape.</p><span className="text-link">Plan a new trip <Icon name="arrow" size={16} /></span></button></div></section>
+        <section id="trips" className="trips-section" aria-labelledby="trips-title"><div className="section-heading"><div><p className="eyebrow">EVERY JOURNEY HAS A STORY</p><h2 id="trips-title">Your trips</h2></div><span className="section-note">Your next memory starts here.</span></div><div className="trips-grid"><button className="trip-card" onClick={() => { window.location.hash = tripHref(spainTrip.id); }}><div className="trip-photo"><Photo src={photos.barcelona} alt="Barcelona rooftops" /><span className="photo-badge">UPCOMING</span><span className="photo-bottom">Spain</span></div><div className="trip-card-info"><div><h3>Spain 2027</h3><p>15–19 February 2027 <span>· 5 days</span></p></div><span className="small-arrow"><Icon name="arrow" size={19} /></span></div></button><button className="empty-trip" onClick={() => setDialog('Create New Trip')}><span className="dashed-icon"><Icon name="plus" size={25} /></span><h3>A new adventure is calling</h3><p>Big dreams or a little weekend away.<br />Make a little space for your next escape.</p><span className="text-link">Plan a new trip <Icon name="arrow" size={16} /></span></button></div></section>
         <section id="inspiration" aria-labelledby="inspiration-title"><div className="section-heading"><div><p className="eyebrow">FOR YOUR EVER-GROWING WISHLIST</p><h2 id="inspiration-title">A little inspiration</h2></div><span className="section-note">Let your mind wander <span aria-hidden="true">↗</span></span></div><div className="inspiration-grid">{[{ name: 'The Italian Riviera', tag: 'SLOW DAYS & SALTY AIR', image: photos.italy, country: 'Italy' }, { name: 'A love letter to Paris', tag: 'CAFÉS, CULTURE & COBBLED STREETS', image: photos.paris, country: 'France' }, { name: 'Somewhere by the sea', tag: 'A LITTLE ESCAPE FROM THE EVERYDAY', image: photos.coast, country: 'Greece' }].map(place => <article className="inspiration-card" key={place.name}><div className="inspiration-photo"><Photo src={place.image} alt={`${place.country} travel inspiration`} /><span className="inspiration-country"><Icon name="pin" size={13} />{place.country}</span><button className={`save-button ${saved.includes(place.name) ? 'saved' : ''}`} aria-label={`${saved.includes(place.name) ? 'Unsave' : 'Save'} ${place.name}`} aria-pressed={saved.includes(place.name)} onClick={() => toggleSave(place.name)}><Icon name="heart" size={18} /></button></div><div className="inspiration-info"><p>{place.tag}</p><h3>{place.name}</h3></div></article>)}</div></section>
         <footer className="page-footer"><Icon name="compass" size={18} /><span>Go somewhere. Feel something. Keep the memory.</span><span>MY TRAVEL JOURNAL</span></footer>
       </main>
@@ -73,5 +75,24 @@ function App() {
       {dialog && <dialog open className="detail-dialog" ref={node => { if (node && !node.hasAttribute('data-modal')) { node.close(); node.showModal(); node.setAttribute('data-modal', 'true'); } }} onCancel={() => setDialog(null)} onClick={e => { if (e.target === e.currentTarget) setDialog(null); }}><button className="dialog-close icon-button" onClick={() => setDialog(null)} aria-label="Close dialog"><Icon name="close" /></button><p className="eyebrow">YOUR TRAVEL JOURNAL</p><h2>{dialog}</h2>{dialog === 'Spain 2027' ? <><p>Barcelona, Spain · 15–19 February 2027</p><p>Five days to explore, discover, and make memories.</p><span className="status-pill">Planning</span></> : dialog === 'Saved Places' ? <><p>Your inspiration collection for this visit.</p>{saved.length ? <ul>{saved.map(place => <li key={place}>{place}</li>)}</ul> : <p>Tap a heart on an inspiration card to save a destination here.</p>}</> : <p>This is a preview of your homepage. {dialog} will be available in a future update.</p>}<button className="green-button" onClick={() => setDialog(null)}>Back to your dashboard <Icon name="arrow" size={17} /></button></dialog>}
     </div>
   );
+}
+function App() {
+  const [hash, setHash] = useState(() => window.location.hash);
+  useEffect(() => {
+    const onHashChange = () => setHash(window.location.hash);
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+  const route = tripRoute(hash);
+  useEffect(() => {
+    if (!tripRoute(hash)) {
+      const frame = requestAnimationFrame(() => document.getElementById(hash.slice(1) || 'home')?.scrollIntoView());
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [hash]);
+  if (route && route.tripId === spainTrip.id) {
+    return <TripDashboard key={spainTrip.id} trip={spainTrip} section={route.section} />;
+  }
+  return <Homepage />;
 }
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
