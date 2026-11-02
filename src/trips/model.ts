@@ -1,13 +1,16 @@
 export type PlanningTaskId = 'flights' | 'accommodation' | 'transport' | 'attractions' | 'insurance' | 'preparation';
 export type TripSection = 'overview' | 'itinerary' | 'saved-places' | 'budget' | 'bookings' | 'packing-list' | 'travel-notes';
 export interface Destination {
+  id?: string;
+  photoQuery?: string;
   name: string;
   description: string;
   image: string;
   alt: string;
-  kind: 'City' | 'Excursion from Barcelona';
+  kind: 'City' | 'Excursion from Barcelona' | 'Destination';
 }
 export interface Trip {
+  autoPhotography?: boolean;
   id: string;
   name: string;
   startDate: string;
@@ -42,9 +45,9 @@ export const spainTrip: Trip = {
   id: 'spain-2027', name: 'Spain 2027', startDate: '2027-02-15', endDate: '2027-02-19',
   timeZone: 'Europe/Madrid', nights: 4, status: 'Planning',
   destinations: [
-    { name: 'Madrid', kind: 'City', description: 'Grand boulevards, art-filled afternoons, and a table that invites you to linger.', image: 'https://images.unsplash.com/photo-1543783207-ec64e4d95325?auto=format&fit=crop&w=900&q=80', alt: 'Madrid city rooftops in the evening light' },
-    { name: 'Barcelona', kind: 'City', description: 'Winding streets. Long lunches. A city to get lost in.', image: 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=900&q=80', alt: 'Barcelona skyline and the Sagrada Família' },
-    { name: 'Montserrat', kind: 'Excursion from Barcelona', description: 'A little higher, a little quieter. Mountain paths and a monastery among the peaks.', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Monestir%20de%20Montserrat.jpg?width=900', alt: 'Montserrat mountain landscape and monastery' },
+    { name: 'Madrid', photoQuery: 'Madrid, Spain', kind: 'City', description: 'Grand boulevards, art-filled afternoons, and a table that invites you to linger.', image: 'https://images.unsplash.com/photo-1543783207-ec64e4d95325?auto=format&fit=crop&w=900&q=80', alt: 'Madrid city rooftops in the evening light' },
+    { name: 'Barcelona', photoQuery: 'Barcelona, Spain', kind: 'City', description: 'Winding streets. Long lunches. A city to get lost in.', image: 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=900&q=80', alt: 'Barcelona skyline and the Sagrada Família' },
+    { name: 'Montserrat', photoQuery: 'Montserrat monastery, Catalonia, Spain', kind: 'Excursion from Barcelona', description: 'A little higher, a little quieter. Mountain paths and a monastery among the peaks.', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Monestir%20de%20Montserrat.jpg?width=900', alt: 'Montserrat mountain landscape and monastery' },
   ],
 };
 const dayMs = 86_400_000;

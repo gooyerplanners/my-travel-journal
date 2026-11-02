@@ -3,6 +3,11 @@ import { TripDashboard } from './trips/TripDashboard';
 import { spainTrip, tripHref, tripRoute } from './trips/model';
 import { createRoot } from 'react-dom/client';
 import './style.css';
+import { JournalLibrary, useJournalLibrary } from './photography/JournalLibrary';
+import { CreateTrip } from './photography/CreateTrip';
+import { LibraryTripCard } from './photography/LibraryTripCard';
+import { useTripPhotos } from './photography/useTripPhotos';
+import { JournalPhoto, PhotoCredit } from './photography/Photo';
 
 type IconName = 'home' | 'compass' | 'heart' | 'note' | 'wallet' | 'bag' | 'plus' | 'arrow' | 'pin' | 'calendar' | 'menu' | 'close';
 function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
@@ -36,6 +41,9 @@ const actions: { title: string; sub: string; icon: IconName }[] = [
   { title: 'Create New Trip', sub: 'Where to next?', icon: 'plus' },
 ];
 function Homepage() {
+  const spainPhotos = useTripPhotos(spainTrip);
+  const library = useJournalLibrary();
+  const [creatingTrip, setCreatingTrip] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialog, setDialog] = useState<string | null>(null);
   const [saved, setSaved] = useState<string[]>([]);
@@ -66,17 +74,20 @@ function Homepage() {
           <div className="hero-content"><p className="hero-kicker">A LITTLE SUNSHINE, A LITTLE SLOWER</p><h2>Hola, Barcelona.</h2><p>Winding streets. Long lunches. A city to get lost in.</p><button className="cream-button" onClick={() => { window.location.hash = tripHref(spainTrip.id); }}>Explore your trip <Icon name="arrow" size={18} /></button></div><span className="hero-location"><Icon name="pin" size={15} /> Barcelona, Spain</span>
         </section>
         <section className="upcoming-card" aria-label="Upcoming trip details"><div className="trip-calendar"><span>FEB</span><strong>15</strong></div><div className="upcoming-title"><span className="eyebrow">YOUR UPCOMING TRIP</span><h3>Spain 2027 <span className="status-pill">Planning</span></h3><p className="trip-timing"><span className="trip-date"><Icon name="calendar" size={14} />15–19 February 2027</span><span className="dot-separator" aria-hidden="true">·</span><span className="trip-duration">5 days of possibility</span></p></div><div className="trip-travelers"><span>J</span><p>One beautiful adventure<br /><small>Made just for you</small></p></div><button className="round-arrow" aria-label="View Spain 2027 trip" onClick={() => { window.location.hash = tripHref(spainTrip.id); }}><Icon name="arrow" /></button></section>
-        <section className="quick-section" aria-labelledby="quick-title"><div className="section-heading quick-heading"><h2 id="quick-title">A little planning goes a long way</h2><span>THE DETAILS THAT MAKE IT YOURS</span></div><div className="quick-actions">{actions.map(action => <button key={action.title} className={`quick-card ${action.icon === 'plus' ? 'new-trip' : ''}`} onClick={() => setDialog(action.title)}><span className={`action-icon icon-${action.icon}`}><Icon name={action.icon} /></span><strong>{action.title}</strong><small>{action.sub}</small></button>)}</div></section>
-        <section id="trips" className="trips-section" aria-labelledby="trips-title"><div className="section-heading"><div><p className="eyebrow">EVERY JOURNEY HAS A STORY</p><h2 id="trips-title">Your trips</h2></div><span className="section-note">Your next memory starts here.</span></div><div className="trips-grid"><button className="trip-card" onClick={() => { window.location.hash = tripHref(spainTrip.id); }}><div className="trip-photo"><Photo src={photos.barcelona} alt="Barcelona rooftops" /><span className="photo-badge">UPCOMING</span><span className="photo-bottom">Spain</span></div><div className="trip-card-info"><div><h3>Spain 2027</h3><p>15–19 February 2027 <span>· 5 days</span></p></div><span className="small-arrow"><Icon name="arrow" size={19} /></span></div></button><button className="empty-trip" onClick={() => setDialog('Create New Trip')}><span className="dashed-icon"><Icon name="plus" size={25} /></span><h3>A new adventure is calling</h3><p>Big dreams or a little weekend away.<br />Make a little space for your next escape.</p><span className="text-link">Plan a new trip <Icon name="arrow" size={16} /></span></button></div></section>
+        <section className="quick-section" aria-labelledby="quick-title"><div className="section-heading quick-heading"><h2 id="quick-title">A little planning goes a long way</h2><span>THE DETAILS THAT MAKE IT YOURS</span></div><div className="quick-actions">{actions.map(action => <button key={action.title} className={`quick-card ${action.icon === 'plus' ? 'new-trip' : ''}`} onClick={() => action.title === 'Create New Trip' ? setCreatingTrip(true) : setDialog(action.title)}><span className={`action-icon icon-${action.icon}`}><Icon name={action.icon} /></span><strong>{action.title}</strong><small>{action.sub}</small></button>)}</div></section>
+        <section id="trips" className="trips-section" aria-labelledby="trips-title"><div className="section-heading"><div><p className="eyebrow">EVERY JOURNEY HAS A STORY</p><h2 id="trips-title">Your trips</h2></div><span className="section-note">Your next memory starts here.</span></div><div className="trips-grid"><button className="trip-card" onClick={() => { window.location.hash = tripHref(spainTrip.id); }}><div className="trip-photo"><JournalPhoto photo={spainPhotos.photoFor('cover')} fallbackUrl={photos.barcelona} alt="Barcelona rooftops" showCredit={false} /><span className="photo-badge">UPCOMING</span><span className="photo-bottom">Spain</span></div><div className="trip-card-info"><div><h3>Spain 2027</h3><p>15–19 February 2027 <span>· 5 days</span></p></div><span className="small-arrow"><Icon name="arrow" size={19} /></span></div></button><button className="empty-trip" onClick={() => setCreatingTrip(true)}><span className="dashed-icon"><Icon name="plus" size={25} /></span><h3>A new adventure is calling</h3><p>Big dreams or a little weekend away.<br />Make a little space for your next escape.</p><span className="text-link">Plan a new trip <Icon name="arrow" size={16} /></span></button></div><PhotoCredit photo={spainPhotos.photoFor('cover')} /></section>
+        {library.trips.length > 0 && <div className="pj-created-trips">{library.trips.map(trip => <LibraryTripCard key={trip.id} trip={trip} />)}</div>}
         <section id="inspiration" aria-labelledby="inspiration-title"><div className="section-heading"><div><p className="eyebrow">FOR YOUR EVER-GROWING WISHLIST</p><h2 id="inspiration-title">A little inspiration</h2></div><span className="section-note">Let your mind wander <span aria-hidden="true">↗</span></span></div><div className="inspiration-grid">{[{ name: 'The Italian Riviera', tag: 'SLOW DAYS & SALTY AIR', image: photos.italy, country: 'Italy' }, { name: 'A love letter to Paris', tag: 'CAFÉS, CULTURE & COBBLED STREETS', image: photos.paris, country: 'France' }, { name: 'Somewhere by the sea', tag: 'A LITTLE ESCAPE FROM THE EVERYDAY', image: photos.coast, country: 'Greece' }].map(place => <article className="inspiration-card" key={place.name}><div className="inspiration-photo"><Photo src={place.image} alt={`${place.country} travel inspiration`} /><span className="inspiration-country"><Icon name="pin" size={13} />{place.country}</span><button className={`save-button ${saved.includes(place.name) ? 'saved' : ''}`} aria-label={`${saved.includes(place.name) ? 'Unsave' : 'Save'} ${place.name}`} aria-pressed={saved.includes(place.name)} onClick={() => toggleSave(place.name)}><Icon name="heart" size={18} /></button></div><div className="inspiration-info"><p>{place.tag}</p><h3>{place.name}</h3></div></article>)}</div></section>
         <footer className="page-footer"><Icon name="compass" size={18} /><span>Go somewhere. Feel something. Keep the memory.</span><span>MY TRAVEL JOURNAL</span></footer>
       </main>
-      <nav className="bottom-nav" aria-label="Mobile navigation"><a href="#home" className="selected"><Icon name="home" size={20} />Home</a><a href="#trips"><Icon name="bag" size={20} />My trips</a><button onClick={() => setDialog('Create New Trip')} className="bottom-create" aria-label="Create new trip"><Icon name="plus" size={23} /></button><button onClick={() => setDialog('Saved Places')}><Icon name="heart" size={20} />Saved</button><a href="#inspiration"><Icon name="compass" size={20} />Explore</a></nav>
+      <nav className="bottom-nav" aria-label="Mobile navigation"><a href="#home" className="selected"><Icon name="home" size={20} />Home</a><a href="#trips"><Icon name="bag" size={20} />My trips</a><button onClick={() => setCreatingTrip(true)} className="bottom-create" aria-label="Create new trip"><Icon name="plus" size={23} /></button><button onClick={() => setDialog('Saved Places')}><Icon name="heart" size={20} />Saved</button><a href="#inspiration"><Icon name="compass" size={20} />Explore</a></nav>
+      {creatingTrip && <CreateTrip onClose={() => setCreatingTrip(false)} />}
       {dialog && <dialog open className="detail-dialog" ref={node => { if (node && !node.hasAttribute('data-modal')) { node.close(); node.showModal(); node.setAttribute('data-modal', 'true'); } }} onCancel={() => setDialog(null)} onClick={e => { if (e.target === e.currentTarget) setDialog(null); }}><button className="dialog-close icon-button" onClick={() => setDialog(null)} aria-label="Close dialog"><Icon name="close" /></button><p className="eyebrow">YOUR TRAVEL JOURNAL</p><h2>{dialog}</h2>{dialog === 'Spain 2027' ? <><p>Barcelona, Spain · 15–19 February 2027</p><p>Five days to explore, discover, and make memories.</p><span className="status-pill">Planning</span></> : dialog === 'Saved Places' ? <><p>Your inspiration collection for this visit.</p>{saved.length ? <ul>{saved.map(place => <li key={place}>{place}</li>)}</ul> : <p>Tap a heart on an inspiration card to save a destination here.</p>}</> : <p>This is a preview of your homepage. {dialog} will be available in a future update.</p>}<button className="green-button" onClick={() => setDialog(null)}>Back to your dashboard <Icon name="arrow" size={17} /></button></dialog>}
     </div>
   );
 }
 function App() {
+  const library = useJournalLibrary();
   const [hash, setHash] = useState(() => window.location.hash);
   useEffect(() => {
     const onHashChange = () => setHash(window.location.hash);
@@ -90,9 +101,11 @@ function App() {
       return () => cancelAnimationFrame(frame);
     }
   }, [hash]);
-  if (route && route.tripId === spainTrip.id) {
-    return <TripDashboard key={spainTrip.id} trip={spainTrip} section={route.section} />;
+  if (route) {
+    const trip = route.tripId === spainTrip.id ? spainTrip : library.trips.find(trip => trip.id === route.tripId);
+    if (trip) return <TripDashboard key={trip.id} trip={trip} section={route.section} />;
+    return <div className="trip-dashboard"><main className="td-main"><a className="td-home-link" href="#home">← Back to homepage</a><section className="td-card"><h1>This trip is not in your journal.</h1><p className="td-muted">Check that you are using the same browser used to create this trip.</p><button className="td-button" onClick={() => { window.location.hash = 'home'; }}>Back to your journal</button></section></main></div>;
   }
   return <Homepage />;
 }
-createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode><JournalLibrary><App /></JournalLibrary></StrictMode>);
