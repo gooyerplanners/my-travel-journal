@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { DestinationPhoto } from './types';
 export function PhotoCredit({ photo }: { photo?: DestinationPhoto }) {
   if (!photo?.credit) return null;
-  return <span className="pj-credit">Photo by <a href={photo.credit.url} target="_blank" rel="noopener noreferrer">{photo.credit.name}</a> on <a href={photo.credit.providerUrl} target="_blank" rel="noopener noreferrer">Pexels</a></span>;
+  return <span className="pj-credit">Photo by <a href={photo.credit.url} target="_blank" rel="noopener noreferrer">{photo.credit.name}</a> on <a href={photo.credit.providerUrl} target="_blank" rel="noopener noreferrer">{photo.source === 'unsplash' ? 'Unsplash' : 'Pexels'}</a></span>;
 }
 export function JournalPhoto({ photo, fallbackUrl, alt, eager = false, showCredit = true }: { photo?: DestinationPhoto; fallbackUrl?: string; alt: string; eager?: boolean; showCredit?: boolean }) {
   const src = photo?.url || fallbackUrl;

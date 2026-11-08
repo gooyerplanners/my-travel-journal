@@ -25,6 +25,6 @@ node --test tests/trip-model.test.mjs
 
 ## Destination photography
 
-Automatic Pexels destination suggestions, alternative photo selection, and browser-local trip/photo references are implemented. Personal photo uploads, cloud storage, and account syncing are intentionally deferred. A server-side Pexels key is needed for live suggestions; the journal keeps graceful fallbacks until connected.
+Automatic Unsplash destination suggestions, alternative photo selection, and browser-local trip/photo references are implemented. Personal photo uploads, cloud storage, and account syncing are intentionally deferred. A server-side Unsplash Access Key is needed for live suggestions; the journal keeps graceful fallbacks until connected.
 
 See [PHOTOGRAPHY.md](PHOTOGRAPHY.md) for the browser-only credential setup, privacy/persistence details, and server commands. No local software installation or public deployment is needed to configure the cloud preview.

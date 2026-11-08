@@ -24,11 +24,23 @@ export function useTripPhotos(trip: Trip) {
   const [retry, setRetry] = useState(0);
   const read = useCallback(() => parsePhotoSelections(localStorage.getItem(key)), [key]);
   const save = useCallback(async (slot: string, photo: DestinationPhoto, onlyIfMissing = false) => {
+    let latest: PhotoSelection[];
+    try {
+      latest = read();
+      const previous = latest.find(item => item.slot === slot);
+      if ((onlyIfMissing && previous) || (previous?.photo.id === photo.id && previous.photo.source === photo.source)) { setSelections(latest); return; }
+      // Check storage before registering a selection; never claim it is saved when storage is blocked.
+      localStorage.setItem(key, JSON.stringify(latest));
+    } catch { throw new Error('This browser could not save your photograph selection. Check storage settings and try again.'); }
+    const result = await journalRequest<{ photo: DestinationPhoto }>('/photos/select', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: photo.source, id: photo.id }),
+    });
     let next: PhotoSelection[];
     try {
-      const latest = read();
+      latest = read();
       if (onlyIfMissing && latest.some(item => item.slot === slot)) { setSelections(latest); return; }
-      next = [...latest.filter(item => item.slot !== slot), { slot, photo }];
+      next = [...latest.filter(item => item.slot !== slot), { slot, photo: result.photo }];
       localStorage.setItem(key, JSON.stringify(next));
     } catch { throw new Error('This browser could not save your photograph selection. Check storage settings and try again.'); }
     setSelections(next); setError('');

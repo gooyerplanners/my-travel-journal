@@ -3,11 +3,16 @@ export const photoStorageKey = (tripId: string) => `my-travel-journal:photograph
 export function isDestinationPhoto(value: unknown): value is DestinationPhoto {
   if (!value || typeof value !== 'object') return false;
   const p = value as DestinationPhoto;
-  const safeUrl = (url: unknown, host: string) => { try { const u = new URL(String(url)); return u.protocol === 'https:' && u.hostname === host; } catch { return false; } };
-  return p.source === 'pexels' && typeof p.id === 'string' && /^\d{1,12}$/.test(p.id) &&
-    typeof p.alt === 'string' && typeof p.width === 'number' && p.width > 0 && typeof p.height === 'number' && p.height > 0 &&
-    safeUrl(p.url, 'images.pexels.com') && safeUrl(p.thumbnail, 'images.pexels.com') && typeof p.credit?.name === 'string' &&
-    safeUrl(p.credit?.url, 'www.pexels.com') && safeUrl(p.credit?.providerUrl, 'www.pexels.com');
+  const safeUrl = (url: unknown, host: string) => { try { const u = new URL(String(url)); return u.origin === `https://${host}` && !u.username && !u.password; } catch { return false; } };
+  const unsplash = p.source === 'unsplash';
+  if (!unsplash && p.source !== 'pexels') return false;
+  const idPattern = unsplash ? /^[A-Za-z0-9_-]{1,80}$/ : /^\d{1,12}$/;
+  const imageHost = unsplash ? 'images.unsplash.com' : 'images.pexels.com';
+  const creditHost = unsplash ? 'unsplash.com' : 'www.pexels.com';
+  return typeof p.id === 'string' && idPattern.test(p.id) &&
+    typeof p.alt === 'string' && Number.isFinite(p.width) && p.width > 0 && Number.isFinite(p.height) && p.height > 0 &&
+    safeUrl(p.url, imageHost) && safeUrl(p.thumbnail, imageHost) && typeof p.credit?.name === 'string' &&
+    safeUrl(p.credit?.url, creditHost) && safeUrl(p.credit?.providerUrl, creditHost);
 }
 export function parsePhotoSelections(raw: string | null): PhotoSelection[] {
   try {

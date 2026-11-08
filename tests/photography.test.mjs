@@ -2,15 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { createPhotoApi } from '../server/photo-api.mjs';
-import { normalizePexels } from '../server/photography.mjs';
+import { normalizePexels, normalizeUnsplash } from '../server/photography.mjs';
 import { createTrip, parseSavedTrips } from '../src/trips/createTrip.ts';
 import { parsePhotoSelections, isDestinationPhoto } from '../src/photography/photoStorage.ts';
 const rawPhoto = {
+  id: 'madrid-view_1', width: 4000, height: 2400, alt_description: 'Sunlit Madrid rooftops',
+  user: { name: 'Example Photographer', links: { html: 'https://unsplash.com/@example' } },
+  links: { html: 'https://unsplash.com/photos/madrid-view_1', download_location: 'https://api.unsplash.com/photos/madrid-view_1/download?ixid=provider-tracking' },
+  urls: { regular: 'https://images.unsplash.com/photo-example?ixid=image-tracking&w=1080', small: 'https://images.unsplash.com/photo-example?ixid=image-tracking&w=400' },
+};
+const legacyPhoto = {
   id: 12345, width: 4000, height: 2400, alt: 'Sunlit Madrid rooftops',
   photographer: 'Example Photographer', photographer_url: 'https://www.pexels.com/@example',
   url: 'https://www.pexels.com/photo/madrid-12345/',
   src: { large2x: 'https://images.pexels.com/photos/12345/photo.jpeg?w=1920', medium: 'https://images.pexels.com/photos/12345/photo.jpeg?w=640' },
 };
+
 async function withApi(options, run) {
   const handler = createPhotoApi(options);
   const server = createServer((req, res) => { void handler(req, res, () => res.writeHead(404).end()); });
@@ -20,19 +27,20 @@ async function withApi(options, run) {
 }
 test('unconfigured service reports status and a useful error, without inventing images', async () => {
   await withApi({ env: {}, fetcher: () => { throw new Error('Should not fetch'); } }, async base => {
-    assert.deepEqual(await (await fetch(base + '/api/journal/status')).json(), { searchConfigured: false });
+    assert.deepEqual(await (await fetch(base + '/api/journal/status')).json(), { searchConfigured: false, provider: 'unsplash' });
     const response = await fetch(base + '/api/journal/photos/search?destination=Madrid');
     assert.equal(response.status, 503);
-    assert.match((await response.json()).error, /PEXELS_API_KEY/);
+    assert.match((await response.json()).error, /UNSPLASH_ACCESS_KEY/);
   });
 });
 test('search keeps credentials server-side, returns attribution, filters portrait/small images, and caches', async () => {
   let calls = 0;
-  await withApi({ env: { PEXELS_API_KEY: 'test-server-only-secret' }, fetcher: async (url, options) => {
-    calls++; assert.equal(new URL(url).hostname, 'api.pexels.com');
+  await withApi({ env: { UNSPLASH_ACCESS_KEY: 'test-server-only-secret' }, fetcher: async (url, options) => {
+    calls++; assert.equal(new URL(url).hostname, 'api.unsplash.com');
     assert.equal(new URL(url).searchParams.get('query'), 'Kyoto, Japan');
-    assert.equal(options.headers.Authorization, 'test-server-only-secret');
-    return Response.json({ photos: [rawPhoto, { ...rawPhoto, id: 2, width: 400, height: 1000 }], next_page: 'provider-next-page' });
+    assert.equal(options.headers.Authorization, 'Client-ID test-server-only-secret');
+    assert.equal(options.headers['Accept-Version'], 'v1');
+    return Response.json({ results: [rawPhoto, { ...rawPhoto, id: 'portrait', width: 400, height: 1000 }], total_pages: 2 });
   } }, async base => {
     for (let i = 0; i < 2; i++) {
       const response = await fetch(base + '/api/journal/photos/search?destination=Kyoto%2C%20Japan&page=1');
@@ -41,13 +49,15 @@ test('search keeps credentials server-side, returns attribution, filters portrai
       const data = JSON.parse(text); assert.equal(data.photos.length, 1);
       assert.equal(data.photos[0].credit.name, 'Example Photographer');
       assert.equal(data.hasMore, true); assert.ok(isDestinationPhoto(data.photos[0]));
+      assert.equal(new URL(data.photos[0].url).searchParams.get('ixid'), 'image-tracking');
+      assert.equal(new URL(data.photos[0].credit.url).searchParams.get('utm_source'), 'my_travel_journal');
     }
     assert.equal(calls, 1);
   });
 });
 test('upstream failures and rate limits are useful and never leak secrets', async () => {
   for (const status of [401, 429, 500]) {
-    await withApi({ env: { PEXELS_API_KEY: 'hidden-key' }, fetcher: async () => new Response('hidden-key upstream diagnostics', { status }) }, async base => {
+    await withApi({ env: { UNSPLASH_ACCESS_KEY: 'hidden-key' }, fetcher: async () => new Response('hidden-key upstream diagnostics', { status }) }, async base => {
       const response = await fetch(base + '/api/journal/photos/search?destination=Barcelona');
       assert.equal(response.status, status === 429 ? 429 : 503);
       assert.ok(!(await response.text()).includes('hidden-key'));
@@ -56,7 +66,7 @@ test('upstream failures and rate limits are useful and never leak secrets', asyn
 });
 test('invalid queries, uploads, cross-site requests, and arbitrary image URLs are rejected', async () => {
   let fetched = false;
-  await withApi({ env: { PEXELS_API_KEY: 'test' }, fetcher: () => { fetched = true; throw Error(); } }, async base => {
+  await withApi({ env: { UNSPLASH_ACCESS_KEY: 'test' }, fetcher: () => { fetched = true; throw Error(); } }, async base => {
     for (const query of ['destination=', 'destination=Madrid&page=-1', 'destination=Madrid&page=1.5']) {
       assert.equal((await fetch(base + '/api/journal/photos/search?' + query)).status, 400);
     }
@@ -64,7 +74,7 @@ test('invalid queries, uploads, cross-site requests, and arbitrary image URLs ar
     assert.equal((await fetch(base + '/api/journal/photos/search?destination=Madrid', { headers: { 'Sec-Fetch-Site': 'cross-site' } })).status, 403);
     assert.equal(fetched, false);
   });
-  assert.throws(() => normalizePexels({ ...rawPhoto, src: { ...rawPhoto.src, large2x: 'https://attacker.example/photo.jpg' } }));
+  assert.throws(() => normalizeUnsplash({ ...rawPhoto, urls: { ...rawPhoto.urls, regular: 'https://attacker.example/photo.jpg' } }));
 });
 test('trip creation validates dates, supports multiple destinations, and restores after refresh', () => {
   const trip = createTrip({ name: 'Japan 2027', startDate: '2027-04-01', endDate: '2027-04-06', timeZone: 'Asia/Tokyo', destinations: ['Kyoto, Japan', 'Nara, Japan'] });
@@ -77,10 +87,84 @@ test('trip creation validates dates, supports multiple destinations, and restore
   }
 });
 test('photo references retain attribution across refresh and corrupt or unsafe data is ignored', () => {
-  const photo = normalizePexels(rawPhoto);
+  const photo = normalizeUnsplash(rawPhoto);
   const records = [{ slot: 'cover', photo }, { slot: 'destination-0', photo }];
   assert.deepEqual(parsePhotoSelections(JSON.stringify(records)), records);
+  const legacy = [{ slot: 'cover', photo: normalizePexels(legacyPhoto) }];
+  assert.deepEqual(parsePhotoSelections(JSON.stringify(legacy)), legacy);
   assert.deepEqual(parsePhotoSelections('{broken'), []);
   assert.deepEqual(parsePhotoSelections(JSON.stringify([{ slot: 'cover', photo: { ...photo, url: 'javascript:alert(1)' } }])), []);
   assert.deepEqual(parsePhotoSelections(JSON.stringify([{ slot: 'cover', photo: { ...photo, source: 'upload' } }])), []);
+});
+
+const select = (base, body = { source: 'unsplash', id: rawPhoto.id }, origin = base) => fetch(base + '/api/journal/photos/select', {
+  method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+});
+test('applying each photo registers a download; search, refresh, and metadata reads do not', async () => {
+  const paths = [];
+  await withApi({ env: { UNSPLASH_ACCESS_KEY: 'private-access-key' }, fetcher: async (url, options) => {
+    assert.equal(options.headers.Authorization, 'Client-ID private-access-key');
+    const path = new URL(url).pathname; paths.push(path);
+    if (path === '/search/photos') return Response.json({ results: [rawPhoto], total_pages: 1 });
+    if (path.endsWith('/download')) return Response.json({ url: 'https://images.unsplash.com/photo-example' });
+    throw new Error('Unexpected metadata call: search metadata should be reused');
+  } }, async base => {
+    await fetch(base + '/api/journal/photos/search?destination=Madrid');
+    await fetch(base + '/api/journal/photos/' + rawPhoto.id);
+    assert.deepEqual(paths, ['/search/photos']);
+    for (let i = 0; i < 2; i++) {
+      const response = await select(base);
+      assert.equal(response.status, 200);
+      const json = await response.json(); assert.ok(isDestinationPhoto(json.photo));
+      assert.equal(json.photo.source, 'unsplash');
+      assert.ok(!JSON.stringify(json).includes('private-access-key'));
+    }
+    assert.deepEqual(paths, ['/search/photos', '/photos/madrid-view_1/download', '/photos/madrid-view_1/download']);
+  });
+});
+test('selection resolves provider metadata and ignores client tracking URLs', async () => {
+  const paths = [];
+  await withApi({ env: { UNSPLASH_ACCESS_KEY: 'private' }, fetcher: async url => {
+    assert.equal(new URL(url).hostname, 'api.unsplash.com');
+    paths.push(new URL(url).pathname);
+    return Response.json(url.includes('/download') ? { url: 'https://images.unsplash.com/example' } : rawPhoto);
+  } }, async base => {
+    const response = await select(base, { source: 'unsplash', id: rawPhoto.id, download_location: 'https://attacker.example/steal' });
+    assert.equal(response.status, 200);
+    assert.deepEqual(paths, ['/photos/madrid-view_1', '/photos/madrid-view_1/download']);
+  });
+});
+test('unsafe provider download links and mismatched IDs never trigger an outbound tracking request', async () => {
+  for (const change of [
+    { links: { ...rawPhoto.links, download_location: 'https://attacker.example/steal' } },
+    { links: { ...rawPhoto.links, download_location: 'https://api.unsplash.com/photos/another/download' } },
+    { id: 'another' },
+  ]) {
+    let calls = 0;
+    await withApi({ env: { UNSPLASH_ACCESS_KEY: 'private' }, fetcher: async () => { calls++; return Response.json({ ...rawPhoto, ...change }); } }, async base => {
+      assert.equal((await select(base)).status, 502); assert.equal(calls, 1);
+    });
+  }
+});
+test('selection requires same-origin JSON and valid IDs; unsupported providers and oversized bodies are rejected', async () => {
+  let calls = 0;
+  await withApi({ env: { UNSPLASH_ACCESS_KEY: 'private' }, fetcher: async () => { calls++; throw Error(); } }, async base => {
+    assert.equal((await select(base, undefined, 'https://attacker.example')).status, 403);
+    assert.equal((await select(base, { id: '../other', source: 'unsplash' })).status, 400);
+    assert.equal((await select(base, { id: '12345', source: 'pexels' })).status, 400);
+    assert.equal((await select(base, { id: 'x'.repeat(2048), source: 'unsplash' })).status, 413);
+    assert.equal(calls, 0);
+  });
+});
+test('tracking failures return an error instead of reporting a saved photo', async () => {
+  await withApi({ env: { UNSPLASH_ACCESS_KEY: 'private' }, fetcher: async url => url.includes('/download') ? new Response('upstream failure', { status: 500 }) : Response.json(rawPhoto) }, async base => {
+    const response = await select(base); assert.equal(response.status, 503);
+    assert.equal((await response.json()).photo, undefined);
+  });
+});
+test('Unsplash demo quota exhaustion is handled when the provider responds with 403', async () => {
+  await withApi({ env: { UNSPLASH_ACCESS_KEY: 'private' }, fetcher: async () => new Response('Rate Limit Exceeded', { status: 403, headers: { 'X-Ratelimit-Remaining': '0' } }) }, async base => {
+    const response = await fetch(base + '/api/journal/photos/search?destination=Madrid');
+    assert.equal(response.status, 429); assert.equal(response.headers.get('Retry-After'), '3600');
+  });
 });
